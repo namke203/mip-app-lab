@@ -48,8 +48,8 @@ DAY_ORDER = ["Friday", "Saturday", "Sunday", "Monday"]
 COMPARABLE_LOCATIONS = ["KBK", "OGT"]
 ALL_2026_LOCATIONS = ["FAL", "KBK", "OGT"]
 COMPANY_TOTAL_NOTE = (
-    "Company Comparable Total excludes FAL because FAL was not open during Memorial Weekend 2025. "
-    "All-location 2026 total includes FAL."
+    "FAL was not open during Memorial Weekend 2025. Comparable totals use KBK + OGT only. "
+    "The including-new-location total shows current company growth after adding FAL."
 )
 
 
@@ -439,6 +439,8 @@ def build_company_total_rows(totals: pd.DataFrame) -> pd.DataFrame:
 
     all_2026_net = sum_column(all_2026, "net_sales_2026")
     all_2026_orders = sum_column(all_2026, "orders_2026")
+    including_new_change = all_2026_net - comparable_2025
+    including_new_order_change = all_2026_orders - comparable_orders_2025
 
     rows = [
         {
@@ -455,17 +457,17 @@ def build_company_total_rows(totals: pd.DataFrame) -> pd.DataFrame:
             "_growth_label": pd.NA,
         },
         {
-            "location": "Company Total - All 2026",
-            "net_sales_2025": pd.NA,
+            "location": "Company Total - Including New Location",
+            "net_sales_2025": comparable_2025,
             "net_sales_2026": all_2026_net,
-            "difference": pd.NA,
+            "difference": including_new_change,
             "percent_change": pd.NA,
-            "orders_2025": pd.NA,
+            "orders_2025": comparable_orders_2025,
             "orders_2026": all_2026_orders,
-            "order_difference": pd.NA,
+            "order_difference": including_new_order_change,
             "notes": COMPANY_TOTAL_NOTE,
             "_prior_year_not_open": False,
-            "_growth_label": "Not comparable - FAL new",
+            "_growth_label": f"{percent(comparable_growth)} comparable + FAL new",
         },
     ]
     return pd.DataFrame(rows)
@@ -501,6 +503,21 @@ def comparison_table(totals: pd.DataFrame, location: str) -> pd.DataFrame:
 def format_comparison_table(table: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for _, row in table.iterrows():
+        if is_prior_year_not_open(row) and not str(row.get("location", "")).startswith("Company Total"):
+            rows.append(
+                {
+                    "Location": row.get("location"),
+                    "2025 Net": "Not open",
+                    "2026 Net": compact_money(row.get("net_sales_2026")),
+                    "Change": compact_money(row.get("net_sales_2026")),
+                    "Growth": "New",
+                    "2025 Orders": "New",
+                    "2026 Orders": whole_number(row.get("orders_2026")),
+                    "Order Change": whole_number(row.get("orders_2026")),
+                }
+            )
+            continue
+
         rows.append(
             {
                 "Location": row.get("location"),
@@ -586,28 +603,31 @@ def build_kpi_cards(
     if year_mode == "Compare" and location == "ALL":
         company_rows = build_company_total_rows(totals)
         comparable = company_rows[company_rows["location"].eq("Company Total - Comparable")].iloc[0]
+        including_new = company_rows[
+            company_rows["location"].eq("Company Total - Including New Location")
+        ].iloc[0]
 
         return [
             {
-                "label": "2026 Comparable Net",
-                "value": compact_money(comparable["net_sales_2026"]),
-                "caption": f"Comparable: KBK + OGT · {money(comparable['net_sales_2026'])}",
-                "full": money(comparable["net_sales_2026"]),
+                "label": "2026 Total incl. FAL",
+                "value": compact_money(including_new["net_sales_2026"]),
+                "caption": f"All locations · {money(including_new['net_sales_2026'])}",
+                "full": money(including_new["net_sales_2026"]),
             },
             {
-                "label": "2025 Comparable Net",
+                "label": "2025 Comparable Total",
                 "value": compact_money(comparable["net_sales_2025"]),
                 "caption": f"Comparable: KBK + OGT · {money(comparable['net_sales_2025'])}",
                 "full": money(comparable["net_sales_2025"]),
             },
             {
-                "label": "Change",
-                "value": compact_money(comparable["difference"]),
-                "caption": f"Comparable YoY · {money(comparable['difference'])}",
-                "full": money(comparable["difference"]),
+                "label": "Added / Change",
+                "value": compact_money(including_new["difference"]),
+                "caption": "2026 incl. FAL minus 2025 KBK + OGT",
+                "full": money(including_new["difference"]),
             },
             {
-                "label": "Growth %",
+                "label": "Comparable Growth %",
                 "value": percent(comparable["percent_change"]),
                 "caption": "Comparable: KBK + OGT",
                 "full": percent(comparable["percent_change"]),
@@ -924,14 +944,9 @@ comparison = comparison_table(totals, location_choice)
 render_kpi_cards(build_kpi_cards(daily_filtered, totals, year_mode, location_choice), metric_choice)
 
 if year_mode == "Compare" and location_choice == "ALL":
-    all_2026_total = build_company_total_rows(totals)
-    all_2026_total = all_2026_total[all_2026_total["location"].eq("Company Total - All 2026")]
-    all_2026_text = ""
-    if not all_2026_total.empty:
-        all_2026_text = f" ({money(all_2026_total.iloc[0]['net_sales_2026'])})"
     st.caption(
         "Comparable totals exclude FAL because FAL was not open during Memorial Weekend 2025. "
-        f"2026 all-location total including FAL is shown separately below{all_2026_text}."
+        "The 2026 total and Added / Change cards show company growth after adding FAL."
     )
 
 missing_notes = missing_2025_notes(totals, location_choice)
