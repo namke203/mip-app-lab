@@ -1,6 +1,7 @@
 import os
 from html import escape
 from pathlib import Path
+from typing import Optional
 
 import altair as alt
 import pandas as pd
@@ -511,6 +512,13 @@ def render_kpi_cards(cards: list[dict[str, str]], selected_metric: str) -> None:
                 st.caption(card["caption"])
 
 
+def location_total_row(totals: pd.DataFrame, location: str) -> Optional[pd.Series]:
+    matches = totals[totals["location"].eq(location)]
+    if matches.empty:
+        return None
+    return matches.iloc[0]
+
+
 def build_kpi_cards(
     daily: pd.DataFrame,
     totals: pd.DataFrame,
@@ -520,32 +528,91 @@ def build_kpi_cards(
     if year_mode == "Compare" and location == "ALL":
         company_rows = build_company_total_rows(totals)
         comparable = company_rows[company_rows["location"].eq("Company Total - Comparable")].iloc[0]
-        all_2026 = company_rows[company_rows["location"].eq("Company Total - All 2026")].iloc[0]
 
         return [
             {
-                "label": "Comparable 2026",
+                "label": "2026 Comparable Net",
                 "value": compact_money(comparable["net_sales_2026"]),
-                "caption": f"KBK + OGT: {money(comparable['net_sales_2026'])}",
+                "caption": f"Comparable: KBK + OGT · {money(comparable['net_sales_2026'])}",
                 "full": money(comparable["net_sales_2026"]),
             },
             {
-                "label": "Comparable Growth",
+                "label": "2025 Comparable Net",
+                "value": compact_money(comparable["net_sales_2025"]),
+                "caption": f"Comparable: KBK + OGT · {money(comparable['net_sales_2025'])}",
+                "full": money(comparable["net_sales_2025"]),
+            },
+            {
+                "label": "Change",
+                "value": compact_money(comparable["difference"]),
+                "caption": f"Comparable YoY · {money(comparable['difference'])}",
+                "full": money(comparable["difference"]),
+            },
+            {
+                "label": "Growth %",
                 "value": percent(comparable["percent_change"]),
-                "caption": "KBK + OGT vs 2025",
+                "caption": "Comparable: KBK + OGT",
                 "full": percent(comparable["percent_change"]),
             },
+        ]
+
+    if year_mode == "Compare":
+        row = location_total_row(totals, location)
+        if row is None:
+            return []
+
+        if is_prior_year_not_open(row):
+            return [
+                {
+                    "label": "2026 Net Sales",
+                    "value": compact_money(row.get("net_sales_2026")),
+                    "caption": f"Full: {money(row.get('net_sales_2026'))}",
+                    "full": money(row.get("net_sales_2026")),
+                },
+                {
+                    "label": "2025",
+                    "value": "Not open",
+                    "caption": "No prior-year baseline",
+                    "full": "Not open during Memorial Weekend 2025",
+                },
+                {
+                    "label": "YoY Status",
+                    "value": "New",
+                    "caption": "New / Not open last year",
+                    "full": "New / Not open last year",
+                },
+                {
+                    "label": "2026 Orders",
+                    "value": compact_number(row.get("orders_2026")),
+                    "caption": f"Full: {whole_number(row.get('orders_2026'))}",
+                    "full": whole_number(row.get("orders_2026")),
+                },
+            ]
+
+        return [
             {
-                "label": "All 2026",
-                "value": compact_money(all_2026["net_sales_2026"]),
-                "caption": f"Includes FAL: {money(all_2026['net_sales_2026'])}",
-                "full": money(all_2026["net_sales_2026"]),
+                "label": "2026 Net Sales",
+                "value": compact_money(row.get("net_sales_2026")),
+                "caption": f"Full: {money(row.get('net_sales_2026'))}",
+                "full": money(row.get("net_sales_2026")),
             },
             {
-                "label": "2026 Orders",
-                "value": compact_number(all_2026["orders_2026"]),
-                "caption": f"All locations: {whole_number(all_2026['orders_2026'])}",
-                "full": whole_number(all_2026["orders_2026"]),
+                "label": "2025 Net Sales",
+                "value": compact_money(row.get("net_sales_2025")),
+                "caption": f"Full: {money(row.get('net_sales_2025'))}",
+                "full": money(row.get("net_sales_2025")),
+            },
+            {
+                "label": "Change",
+                "value": compact_money(row.get("difference")),
+                "caption": f"Full: {money(row.get('difference'))}",
+                "full": money(row.get("difference")),
+            },
+            {
+                "label": "Growth %",
+                "value": percent(row.get("percent_change")),
+                "caption": "Vs Memorial Weekend 2025",
+                "full": percent(row.get("percent_change")),
             },
         ]
 
@@ -788,6 +855,17 @@ hourly_filtered = filter_location(filter_years(hourly, years), location_choice)
 comparison = comparison_table(totals, location_choice)
 
 render_kpi_cards(build_kpi_cards(daily_filtered, totals, year_mode, location_choice), metric_choice)
+
+if year_mode == "Compare" and location_choice == "ALL":
+    all_2026_total = build_company_total_rows(totals)
+    all_2026_total = all_2026_total[all_2026_total["location"].eq("Company Total - All 2026")]
+    all_2026_text = ""
+    if not all_2026_total.empty:
+        all_2026_text = f" ({money(all_2026_total.iloc[0]['net_sales_2026'])})"
+    st.caption(
+        "Comparable totals exclude FAL because FAL was not open during Memorial Weekend 2025. "
+        f"2026 all-location total including FAL is shown separately below{all_2026_text}."
+    )
 
 missing_notes = missing_2025_notes(totals, location_choice)
 note_lines = []
