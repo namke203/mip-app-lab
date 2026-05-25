@@ -37,13 +37,19 @@ HOME=/tmp STREAMLIT_BROWSER_GATHER_USAGE_STATS=false .venv/bin/streamlit run app
 
 The dashboard compares Memorial Weekend 2025 and 2026 by location. It is a mobile-friendly prototype for quick manager review on phone screens, with compact KPI cards, simpler tables, and smaller charts.
 
-It defaults to reading CSV files from:
+Cloud/demo mode uses the committed sample data folder:
+
+```text
+sample_data/memorial_weekend_comparison/
+```
+
+Local advanced mode can point the sidebar CSV folder field to:
 
 ```text
 ../New project 4/outputs/ad_hoc/2026-05-24_memorial_weekend_comparison/files/
 ```
 
-You can also set a different folder in the app sidebar.
+You can also set any other local CSV folder in the app sidebar.
 
 It only reads local CSV files. It does not call the Square API, does not use API tokens, and does not modify the API pull project or CSV generation logic.
 

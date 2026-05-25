@@ -9,7 +9,8 @@ import streamlit as st
 
 LAB_ROOT = Path(__file__).resolve().parents[2]
 DOCUMENTS_DIR = LAB_ROOT.parent.parent
-DEFAULT_DATA_DIR = (
+DEFAULT_DATA_DIR = LAB_ROOT / "sample_data" / "memorial_weekend_comparison"
+ADVANCED_LOCAL_DATA_DIR = (
     DOCUMENTS_DIR
     / "New project 4"
     / "outputs"
@@ -597,6 +598,10 @@ st.caption("Mobile-friendly local dashboard using only the Memorial Weekend comp
 with st.sidebar:
     st.header("Data Source")
     data_dir_text = st.text_input("CSV folder", value=str(default_data_dir()))
+    st.caption(
+        "Cloud/demo mode uses sample_data/memorial_weekend_comparison/. "
+        f"For local advanced mode, point this to {ADVANCED_LOCAL_DATA_DIR}."
+    )
     st.caption("Only CSV files are read. No Square API calls or tokens are used.")
 
 frames, missing_files = load_exports(data_dir_text)
