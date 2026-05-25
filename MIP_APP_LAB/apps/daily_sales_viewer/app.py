@@ -377,7 +377,78 @@ def percent(value: float) -> str:
 def sum_column(df: pd.DataFrame, column: str) -> float:
     if column not in df.columns or df.empty:
         return 0.0
-    return float(df[column].fillna(0).sum())
+    values = pd.to_numeric(df[column], errors="coerce")
+    return float(values.fillna(0).sum())
+
+
+def year_location_is_not_open(df: pd.DataFrame, year: int, location: str) -> bool:
+    if df.empty:
+        return False
+
+    rows = df[(df["year"].eq(year)) & (df["location"].eq(location))]
+    if rows.empty:
+        return False
+
+    if "status" in rows.columns:
+        statuses = rows["status"].dropna().astype(str).str.lower().str.strip()
+        if not statuses.empty and statuses.eq("not_open").all():
+            return True
+
+    if "notes" in rows.columns:
+        notes = " ".join(rows["notes"].dropna().astype(str)).lower()
+        if "not open" in notes:
+            return True
+
+    return False
+
+
+def build_location_total_rows(daily: pd.DataFrame) -> pd.DataFrame:
+    rows = []
+    locations = sorted(daily["location"].dropna().unique().tolist())
+
+    for location in locations:
+        location_rows = daily[daily["location"].eq(location)]
+        year_rows = {}
+        for year in (2025, 2026):
+            rows_for_year = location_rows[location_rows["year"].eq(year)]
+            not_open = year_location_is_not_open(daily, year, location)
+            year_rows[year] = {
+                "not_open": not_open,
+                "net_sales": pd.NA if not_open else sum_column(rows_for_year, "estimated_net_sales"),
+                "orders": pd.NA if not_open else sum_column(rows_for_year, "order_count"),
+            }
+
+        net_2025 = year_rows[2025]["net_sales"]
+        net_2026 = year_rows[2026]["net_sales"]
+        orders_2025 = year_rows[2025]["orders"]
+        orders_2026 = year_rows[2026]["orders"]
+        comparable = pd.notna(net_2025) and pd.notna(net_2026) and float(net_2025) != 0
+        difference = float(net_2026) - float(net_2025) if comparable else pd.NA
+        percent_change = (difference / float(net_2025)) * 100 if comparable else pd.NA
+        order_difference = (
+            float(orders_2026) - float(orders_2025)
+            if pd.notna(orders_2025) and pd.notna(orders_2026)
+            else pd.NA
+        )
+        notes = "Daily summary Friday-Monday totals."
+        if year_rows[2025]["not_open"]:
+            notes = f"{location} was not open during Memorial Weekend 2025."
+
+        rows.append(
+            {
+                "location": location,
+                "net_sales_2025": net_2025,
+                "net_sales_2026": net_2026,
+                "difference": difference,
+                "percent_change": percent_change,
+                "orders_2025": orders_2025,
+                "orders_2026": orders_2026,
+                "order_difference": order_difference,
+                "notes": notes,
+            }
+        )
+
+    return pd.DataFrame(rows)
 
 
 def selected_years(year_mode: str) -> list[int]:
@@ -567,9 +638,11 @@ def missing_2025_notes(totals: pd.DataFrame, location: str) -> pd.DataFrame:
 
     notes = table["notes"].fillna("").str.lower() if "notes" in table.columns else ""
     missing_by_note = notes.str.contains("no 2025|missing 2025|no completed order|not open", regex=True)
+    net_2025 = pd.to_numeric(table.get("net_sales_2025", pd.Series(0, index=table.index)), errors="coerce")
+    net_2026 = pd.to_numeric(table.get("net_sales_2026", pd.Series(0, index=table.index)), errors="coerce")
     missing_by_value = (
-        table.get("net_sales_2025", pd.Series(0, index=table.index)).fillna(0).eq(0)
-        & table.get("net_sales_2026", pd.Series(0, index=table.index)).fillna(0).gt(0)
+        net_2025.fillna(0).eq(0)
+        & net_2026.fillna(0).gt(0)
     )
     return table[missing_by_note | missing_by_value]
 
@@ -919,7 +992,7 @@ if missing_files:
 
 hourly = frames["hourly"]
 daily = frames["daily"]
-totals = frames["totals"]
+totals = build_location_total_rows(daily)
 items = frames["items"]
 
 filter_cols = st.columns(4)
