@@ -1,0 +1,4 @@
+location,net_sales_2025,net_sales_2026,difference,percent_change,orders_2025,orders_2026,order_difference,notes
+FAL,,4623.34,,,,338,,FAL was not open during Memorial Weekend 2025.
+OGT,12579.50,13101.57,522.07,4.15,860,860,0,Net sales use pos_net_sales + paid invoice sales - completed refunds.
+KBK,14239.69,15785.56,1545.87,10.86,919,973,54,Net sales use pos_net_sales + paid invoice sales - completed refunds.
