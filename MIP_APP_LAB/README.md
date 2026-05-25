@@ -37,6 +37,11 @@ HOME=/tmp STREAMLIT_BROWSER_GATHER_USAGE_STATS=false .venv/bin/streamlit run app
 
 The dashboard compares Memorial Weekend 2025 and 2026 by location. It is a mobile-friendly prototype for quick manager review on phone screens, with compact KPI cards, simpler tables, and smaller charts.
 
+The report covers Memorial Weekend Friday through Monday:
+
+- 2025: Friday 2025-05-23 through Monday 2025-05-26
+- 2026: Friday 2026-05-22 through Monday 2026-05-25
+
 Cloud/demo mode uses the committed sample data folder:
 
 ```text

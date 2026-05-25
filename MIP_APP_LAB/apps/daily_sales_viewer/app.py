@@ -51,6 +51,11 @@ COMPANY_TOTAL_NOTE = (
     "FAL was not open during Memorial Weekend 2025. Comparable totals use KBK + OGT only. "
     "The including-new-location total shows current company growth after adding FAL."
 )
+REPORT_DATE_NOTE = (
+    "This report compares Memorial Weekend Friday-Monday sales. "
+    "2025 dates: Friday 2025-05-23 through Monday 2025-05-26. "
+    "2026 dates: Friday 2026-05-22 through Monday 2026-05-25."
+)
 
 
 st.set_page_config(
@@ -891,9 +896,7 @@ st.caption("Mobile-friendly local dashboard using only the Memorial Weekend comp
 
 with st.expander("What this report includes", expanded=False):
     st.caption(
-        "This report compares Memorial Weekend Friday-Sunday sales. "
-        "2025 dates: Friday May 23, Saturday May 24, Sunday May 25. "
-        "2026 dates: Friday May 22, Saturday May 23, Sunday May 24. "
+        f"{REPORT_DATE_NOTE} "
         "Comparable year-over-year totals use KBK + OGT only because FAL was not open during Memorial Weekend 2025. "
         "2026 all-location totals may include FAL where labeled."
     )
@@ -950,7 +953,7 @@ if year_mode == "Compare" and location_choice == "ALL":
     )
 
 missing_notes = missing_2025_notes(totals, location_choice)
-note_lines = []
+note_lines = [f"<div>{escape(REPORT_DATE_NOTE)}</div>"]
 if location_choice == "ALL":
     note_lines.append(f"<div>{escape(COMPANY_TOTAL_NOTE)}</div>")
 if not missing_notes.empty:
