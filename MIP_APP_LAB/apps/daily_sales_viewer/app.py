@@ -1,3 +1,4 @@
+import base64
 import os
 from html import escape
 from pathlib import Path
@@ -9,6 +10,8 @@ import streamlit as st
 
 
 LAB_ROOT = Path(__file__).resolve().parents[2]
+APP_DIR = Path(__file__).resolve().parent
+LOGO_PATH = APP_DIR / "assets" / "logo.jpg"
 DOCUMENTS_DIR = LAB_ROOT.parent.parent
 DEFAULT_DATA_DIR = LAB_ROOT / "sample_data" / "memorial_weekend_comparison"
 ADVANCED_LOCAL_DATA_DIR = (
@@ -73,6 +76,30 @@ st.markdown(
 
     h2, h3 {
         line-height: 1.2;
+    }
+
+    .dashboard-title {
+        align-items: center;
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 0.8rem;
+        justify-content: center;
+        margin: 0 0 0.2rem;
+        text-align: center;
+    }
+
+    .dashboard-title h1 {
+        flex: 0 1 auto;
+        margin: 0;
+        min-width: 0;
+        text-align: center;
+    }
+
+    .dashboard-logo {
+        flex: 0 0 auto;
+        height: 54px;
+        object-fit: contain;
+        width: 54px;
     }
 
     div[data-testid="stTabs"] button {
@@ -175,6 +202,19 @@ st.markdown(
             font-size: 1.35rem;
         }
 
+        .dashboard-title {
+            gap: 0.38rem;
+        }
+
+        .dashboard-title h1 {
+            font-size: 1.2rem;
+        }
+
+        .dashboard-logo {
+            height: 36px;
+            width: 36px;
+        }
+
         h2, h3 {
             font-size: 1.05rem;
         }
@@ -223,6 +263,25 @@ st.markdown(
 def default_data_dir() -> Path:
     env_path = os.environ.get("MIP_MEMORIAL_DATA_DIR")
     return Path(env_path).expanduser() if env_path else DEFAULT_DATA_DIR
+
+
+def render_dashboard_title() -> None:
+    if not LOGO_PATH.exists():
+        st.title("Memorial Weekend Comparison")
+        return
+
+    encoded_logo = base64.b64encode(LOGO_PATH.read_bytes()).decode("ascii")
+    logo_src = f"data:image/jpeg;base64,{encoded_logo}"
+    st.markdown(
+        f"""
+        <div class="dashboard-title">
+            <img class="dashboard-logo" src="{logo_src}" alt="Mornings in Paris logo">
+            <h1>Memorial Weekend Comparison</h1>
+            <img class="dashboard-logo" src="{logo_src}" alt="Mornings in Paris logo">
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def prepare_frame(df: pd.DataFrame) -> pd.DataFrame:
@@ -808,7 +867,7 @@ def format_daily_table(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-st.title("Memorial Weekend Comparison")
+render_dashboard_title()
 st.caption("Mobile-friendly local dashboard using only the Memorial Weekend comparison CSV files.")
 
 with st.expander("What this report includes", expanded=False):
