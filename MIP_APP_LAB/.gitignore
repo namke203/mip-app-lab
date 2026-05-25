@@ -22,6 +22,7 @@ downloads/
 # Keep intentional placeholders
 !.gitkeep
 !sample_data/README.md
+!sample_data/memorial_weekend_comparison/*.csv
 
 # Python and Streamlit cache files
 __pycache__/
