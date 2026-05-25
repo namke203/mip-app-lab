@@ -1,6 +1,6 @@
 location,net_sales_2025,net_sales_2026,difference,percent_change,orders_2025,orders_2026,order_difference,notes
-FAL,,4623.34,,,,338,,FAL was not open during Memorial Weekend 2025. Missing source date(s): 2026-05-25. 2026 total excludes missing dates until source files are pulled.
-OGT,12579.50,13101.57,522.07,4.15,860,860,0,"Net sales use pos_net_sales + paid invoice sales - completed refunds. Missing source date(s): 2025-05-26, 2026-05-25. Totals exclude those dates until the source files are pulled."
-KBK,14239.69,15785.56,1545.87,10.86,919,973,54,"Net sales use pos_net_sales + paid invoice sales - completed refunds. Missing source date(s): 2025-05-26, 2026-05-25. Totals exclude those dates until the source files are pulled."
-Company Total - Comparable,26819.19,28887.13,2067.94,7.71,1779,1833,54,"Comparable company total uses KBK + OGT only because FAL was not open during Memorial Weekend 2025. Missing source date(s): 2025-05-26, 2026-05-25. Totals exclude those dates until the source files are pulled."
-Company Total - Including New Location,26819.19,33510.47,6691.28,24.95,1779,2171,392,"Including-new-location company total compares KBK + OGT 2025 against KBK + OGT + FAL 2026, including FAL as new. Missing source date(s): 2025-05-26, 2026-05-25. Totals exclude those dates until the source files are pulled."
+FAL,,6192.95,,,,461,,FAL was not open during Memorial Weekend 2025.
+OGT,17659.85,16668.97,-990.88,-5.61,1203,1071,-132,Net sales use pos_net_sales + paid invoice sales - completed refunds.
+KBK,19684.00,20077.35,393.35,2.00,1285,1226,-59,Net sales use pos_net_sales + paid invoice sales - completed refunds.
+Company Total - Comparable,37343.85,36746.32,-597.53,-1.60,2488,2297,-191,Comparable company total uses KBK + OGT only because FAL was not open during Memorial Weekend 2025.
+Company Total - Including New Location,37343.85,42939.27,5595.42,14.98,2488,2758,270,"Including-new-location company total compares KBK + OGT 2025 against KBK + OGT + FAL 2026, including FAL as new."
