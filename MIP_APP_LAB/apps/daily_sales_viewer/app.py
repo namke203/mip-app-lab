@@ -811,6 +811,15 @@ def format_daily_table(df: pd.DataFrame) -> pd.DataFrame:
 st.title("Memorial Weekend Comparison")
 st.caption("Mobile-friendly local dashboard using only the Memorial Weekend comparison CSV files.")
 
+with st.expander("What this report includes", expanded=False):
+    st.caption(
+        "This report compares Memorial Weekend Friday-Sunday sales. "
+        "2025 dates: Friday May 23, Saturday May 24, Sunday May 25. "
+        "2026 dates: Friday May 22, Saturday May 23, Sunday May 24. "
+        "Comparable year-over-year totals use KBK + OGT only because FAL was not open during Memorial Weekend 2025. "
+        "2026 all-location totals may include FAL where labeled."
+    )
+
 with st.sidebar:
     st.header("Data Source")
     data_dir_text = st.text_input("CSV folder", value=str(default_data_dir()))
