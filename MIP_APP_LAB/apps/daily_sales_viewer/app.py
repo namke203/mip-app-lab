@@ -83,16 +83,16 @@ st.markdown(
         display: flex;
         flex-wrap: nowrap;
         gap: 0.8rem;
-        justify-content: center;
+        justify-content: flex-start;
         margin: 0 0 0.2rem;
-        text-align: center;
+        text-align: left;
     }
 
     .dashboard-title h1 {
         flex: 0 1 auto;
         margin: 0;
         min-width: 0;
-        text-align: center;
+        text-align: left;
     }
 
     .dashboard-logo {
@@ -277,7 +277,6 @@ def render_dashboard_title() -> None:
         <div class="dashboard-title">
             <img class="dashboard-logo" src="{logo_src}" alt="Mornings in Paris logo">
             <h1>Memorial Weekend Comparison</h1>
-            <img class="dashboard-logo" src="{logo_src}" alt="Mornings in Paris logo">
         </div>
         """,
         unsafe_allow_html=True,
