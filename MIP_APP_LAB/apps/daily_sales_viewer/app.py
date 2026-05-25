@@ -122,9 +122,31 @@ st.markdown(
 
     .note-panel {
         color: rgba(49, 51, 63, 0.82);
-        font-size: 0.78rem;
-        line-height: 1.35;
-        padding: 0.2rem 0 0.35rem;
+        font-size: 0.72rem;
+        line-height: 1.25;
+        padding: 0.2rem 0 0.1rem;
+    }
+
+    .tiny-data-note {
+        margin: 0.15rem 0 0.45rem;
+        color: rgba(49, 51, 63, 0.72);
+        font-size: 0.72rem;
+        line-height: 1.25;
+    }
+
+    .tiny-data-note summary {
+        cursor: pointer;
+        display: inline;
+        color: rgba(49, 51, 63, 0.72);
+        font-size: 0.72rem;
+        font-weight: 600;
+        list-style-position: inside;
+    }
+
+    .tiny-data-note div {
+        max-width: 760px;
+        padding-top: 0.15rem;
+        color: rgba(49, 51, 63, 0.68);
     }
 
     .stAltairChart, [data-testid="stVegaLiteChart"] {
@@ -416,21 +438,12 @@ def format_hour(hour) -> str:
 
 
 def render_kpi_cards(cards: list[dict[str, str]], selected_metric: str) -> None:
-    card_html = ['<div class="kpi-grid">']
-    for card in cards:
-        selected_class = " selected" if card["label"] == selected_metric else ""
-        title = escape(card["full"])
-        card_html.append(
-            f"""
-            <div class="kpi-card{selected_class}" title="{title}">
-                <div class="kpi-label">{escape(card["label"])}</div>
-                <div class="kpi-value">{escape(card["value"])}</div>
-                <div class="kpi-caption">{escape(card["caption"])}</div>
-            </div>
-            """
-        )
-    card_html.append("</div>")
-    st.markdown("".join(card_html), unsafe_allow_html=True)
+    columns = st.columns(4)
+    for column, card in zip(columns, cards):
+        with column:
+            with st.container(border=True):
+                st.metric(label=card["label"], value=card["value"], help=card["full"])
+                st.caption(card["caption"])
 
 
 def metric_value_from_row(row: pd.Series, metric: str) -> float:
@@ -675,13 +688,20 @@ render_kpi_cards(
 
 missing_notes = missing_2025_notes(totals, location_choice)
 if not missing_notes.empty:
-    with st.expander("⚠️ Data notes", expanded=False):
-        for _, row in missing_notes.iterrows():
-            note = row.get("notes", "2025 data is missing or incomplete.")
-            st.markdown(
-                f'<div class="note-panel">{escape(str(note))}</div>',
-                unsafe_allow_html=True,
-            )
+    note_lines = []
+    for _, row in missing_notes.iterrows():
+        note = row.get("notes", "2025 data is missing or incomplete.")
+        note_lines.append(f"<div>{escape(str(note))}</div>")
+
+    st.markdown(
+        f"""
+        <details class="tiny-data-note">
+            <summary>⚠️ Data notes</summary>
+            {''.join(note_lines)}
+        </details>
+        """,
+        unsafe_allow_html=True,
+    )
 
 overview_tab, items_tab, hourly_tab, daily_tab = st.tabs(
     ["Comparison", "Top Items", "Hourly", "Daily Detail"]
