@@ -1,0 +1,42 @@
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Real exports, generated outputs, and raw data
+raw_exports/
+exports/
+output/
+outputs/
+data/
+downloads/
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.xlsm
+*.json
+*.jsonl
+
+# Keep intentional placeholders
+!.gitkeep
+!sample_data/README.md
+
+# Python and Streamlit cache files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Local notebooks and reports
+.ipynb_checkpoints/
+*.html
+*.pdf
+
+# System files
+.DS_Store
+Thumbs.db
