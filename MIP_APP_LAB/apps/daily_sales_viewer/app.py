@@ -41,6 +41,12 @@ YEAR_OPTIONS = ["Compare", "2025", "2026"]
 LOCATION_OPTIONS = ["ALL", "FAL", "OGT", "KBK"]
 METRIC_OPTIONS = ["Net Sales", "Orders", "Avg Order", "Total Before Tips"]
 DAY_ORDER = ["Friday", "Saturday", "Sunday", "Monday"]
+COMPARABLE_LOCATIONS = ["KBK", "OGT"]
+ALL_2026_LOCATIONS = ["FAL", "KBK", "OGT"]
+COMPANY_TOTAL_NOTE = (
+    "Company Comparable Total excludes FAL because FAL was not open during Memorial Weekend 2025. "
+    "All-location 2026 total includes FAL."
+)
 
 
 st.set_page_config(
@@ -333,8 +339,9 @@ def chart_height(row_count: int, minimum: int = 220, row_height: int = 28, maxim
 
 
 def is_prior_year_not_open(row: pd.Series) -> bool:
-    if bool(row.get("_prior_year_not_open", False)):
-        return True
+    explicit_status = row.get("_prior_year_not_open", pd.NA)
+    if pd.notna(explicit_status):
+        return bool(explicit_status)
 
     for column in ("prior_year_status", "prior_year_data_status", "prior_year_location_status"):
         if column in row.index and str(row.get(column, "")).strip().lower() == "not_open":
@@ -350,14 +357,65 @@ def is_prior_year_not_open(row: pd.Series) -> bool:
 
 
 def growth_display(row: pd.Series) -> str:
+    custom_growth = row.get("_growth_label")
+    if pd.notna(custom_growth):
+        return str(custom_growth)
     if is_prior_year_not_open(row):
         return "New / Not open last year"
     return percent(row.get("percent_change"))
 
 
+def build_company_total_rows(totals: pd.DataFrame) -> pd.DataFrame:
+    comparable = totals[totals["location"].isin(COMPARABLE_LOCATIONS)]
+    all_2026 = totals[totals["location"].isin(ALL_2026_LOCATIONS)]
+
+    comparable_2025 = sum_column(comparable, "net_sales_2025")
+    comparable_2026 = sum_column(comparable, "net_sales_2026")
+    comparable_orders_2025 = sum_column(comparable, "orders_2025")
+    comparable_orders_2026 = sum_column(comparable, "orders_2026")
+    comparable_change = comparable_2026 - comparable_2025
+    comparable_growth = (
+        (comparable_change / comparable_2025) * 100 if comparable_2025 else float("nan")
+    )
+
+    all_2026_net = sum_column(all_2026, "net_sales_2026")
+    all_2026_orders = sum_column(all_2026, "orders_2026")
+
+    rows = [
+        {
+            "location": "Company Total - Comparable",
+            "net_sales_2025": comparable_2025,
+            "net_sales_2026": comparable_2026,
+            "difference": comparable_change,
+            "percent_change": comparable_growth,
+            "orders_2025": comparable_orders_2025,
+            "orders_2026": comparable_orders_2026,
+            "order_difference": comparable_orders_2026 - comparable_orders_2025,
+            "notes": COMPANY_TOTAL_NOTE,
+            "_prior_year_not_open": False,
+            "_growth_label": pd.NA,
+        },
+        {
+            "location": "Company Total - All 2026",
+            "net_sales_2025": pd.NA,
+            "net_sales_2026": all_2026_net,
+            "difference": pd.NA,
+            "percent_change": pd.NA,
+            "orders_2025": pd.NA,
+            "orders_2026": all_2026_orders,
+            "order_difference": pd.NA,
+            "notes": COMPANY_TOTAL_NOTE,
+            "_prior_year_not_open": False,
+            "_growth_label": "Not comparable - FAL new",
+        },
+    ]
+    return pd.DataFrame(rows)
+
+
 def comparison_table(totals: pd.DataFrame, location: str) -> pd.DataFrame:
     table = filter_location(totals, location).copy()
     table["_prior_year_not_open"] = table.apply(is_prior_year_not_open, axis=1)
+    table["_growth_label"] = pd.NA
     columns = [
         "location",
         "net_sales_2025",
@@ -369,8 +427,15 @@ def comparison_table(totals: pd.DataFrame, location: str) -> pd.DataFrame:
         "order_difference",
         "notes",
         "_prior_year_not_open",
+        "_growth_label",
     ]
     table = table[[column for column in columns if column in table.columns]]
+
+    if location == "ALL":
+        company_rows = build_company_total_rows(totals)
+        table = pd.concat([company_rows, table.sort_values("location")], ignore_index=True)
+        return table[columns]
+
     return table.sort_values("location")
 
 
@@ -444,6 +509,77 @@ def render_kpi_cards(cards: list[dict[str, str]], selected_metric: str) -> None:
             with st.container(border=True):
                 st.metric(label=card["label"], value=card["value"], help=card["full"])
                 st.caption(card["caption"])
+
+
+def build_kpi_cards(
+    daily: pd.DataFrame,
+    totals: pd.DataFrame,
+    year_mode: str,
+    location: str,
+) -> list[dict[str, str]]:
+    if year_mode == "Compare" and location == "ALL":
+        company_rows = build_company_total_rows(totals)
+        comparable = company_rows[company_rows["location"].eq("Company Total - Comparable")].iloc[0]
+        all_2026 = company_rows[company_rows["location"].eq("Company Total - All 2026")].iloc[0]
+
+        return [
+            {
+                "label": "Comparable 2026",
+                "value": compact_money(comparable["net_sales_2026"]),
+                "caption": f"KBK + OGT: {money(comparable['net_sales_2026'])}",
+                "full": money(comparable["net_sales_2026"]),
+            },
+            {
+                "label": "Comparable Growth",
+                "value": percent(comparable["percent_change"]),
+                "caption": "KBK + OGT vs 2025",
+                "full": percent(comparable["percent_change"]),
+            },
+            {
+                "label": "All 2026",
+                "value": compact_money(all_2026["net_sales_2026"]),
+                "caption": f"Includes FAL: {money(all_2026['net_sales_2026'])}",
+                "full": money(all_2026["net_sales_2026"]),
+            },
+            {
+                "label": "2026 Orders",
+                "value": compact_number(all_2026["orders_2026"]),
+                "caption": f"All locations: {whole_number(all_2026['orders_2026'])}",
+                "full": whole_number(all_2026["orders_2026"]),
+            },
+        ]
+
+    net_sales = sum_column(daily, "estimated_net_sales")
+    orders = sum_column(daily, "order_count")
+    before_tips = sum_column(daily, "estimated_total_before_tips")
+    average_sale = net_sales / orders if orders else 0.0
+
+    return [
+        {
+            "label": "Net Sales",
+            "value": compact_money(net_sales),
+            "caption": f"Full: {money(net_sales)}",
+            "full": money(net_sales),
+        },
+        {
+            "label": "Orders",
+            "value": compact_number(orders),
+            "caption": f"Full: {whole_number(orders)}",
+            "full": whole_number(orders),
+        },
+        {
+            "label": "Avg Order",
+            "value": compact_money(average_sale),
+            "caption": f"Full: {money(average_sale)}",
+            "full": money(average_sale),
+        },
+        {
+            "label": "Total Before Tips",
+            "value": compact_money(before_tips),
+            "caption": f"Full: {money(before_tips)}",
+            "full": money(before_tips),
+        },
+    ]
 
 
 def metric_value_from_row(row: pd.Series, metric: str) -> float:
@@ -651,48 +787,18 @@ items_filtered = filter_location(filter_years(items, years), location_choice)
 hourly_filtered = filter_location(filter_years(hourly, years), location_choice)
 comparison = comparison_table(totals, location_choice)
 
-net_sales = sum_column(daily_filtered, "estimated_net_sales")
-orders = sum_column(daily_filtered, "order_count")
-before_tips = sum_column(daily_filtered, "estimated_total_before_tips")
-average_sale = net_sales / orders if orders else 0.0
-
-render_kpi_cards(
-    [
-        {
-            "label": "Net Sales",
-            "value": compact_money(net_sales),
-            "caption": f"Full: {money(net_sales)}",
-            "full": money(net_sales),
-        },
-        {
-            "label": "Orders",
-            "value": compact_number(orders),
-            "caption": f"Full: {whole_number(orders)}",
-            "full": whole_number(orders),
-        },
-        {
-            "label": "Avg Order",
-            "value": compact_money(average_sale),
-            "caption": f"Full: {money(average_sale)}",
-            "full": money(average_sale),
-        },
-        {
-            "label": "Total Before Tips",
-            "value": compact_money(before_tips),
-            "caption": f"Full: {money(before_tips)}",
-            "full": money(before_tips),
-        },
-    ],
-    metric_choice,
-)
+render_kpi_cards(build_kpi_cards(daily_filtered, totals, year_mode, location_choice), metric_choice)
 
 missing_notes = missing_2025_notes(totals, location_choice)
+note_lines = []
+if location_choice == "ALL":
+    note_lines.append(f"<div>{escape(COMPANY_TOTAL_NOTE)}</div>")
 if not missing_notes.empty:
-    note_lines = []
     for _, row in missing_notes.iterrows():
         note = row.get("notes", "2025 data is missing or incomplete.")
         note_lines.append(f"<div>{escape(str(note))}</div>")
 
+if note_lines:
     st.markdown(
         f"""
         <details class="tiny-data-note">
